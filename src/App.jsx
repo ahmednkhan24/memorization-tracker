@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from "recharts";
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from "recharts";
 
 const SURAHS = [
   { number: 1, name: "Al-Fatihah", arabic: "الفاتحة", verses: 7, juz: 1 },
@@ -227,6 +227,7 @@ export default function MemorizationTracker() {
     [STATUS.MEMORIZED]: "bg-emerald-900/60 border-emerald-500 text-emerald-200",
   };
 
+  // TODO why isn't this used?
   const statusDot = {
     [STATUS.NONE]: "bg-slate-600",
     [STATUS.LEARNING]: "bg-amber-400",
