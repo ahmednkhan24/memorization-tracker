@@ -140,7 +140,7 @@ function saveData(data) {
 
 const LARGE_THRESHOLD = 20;
 
-export default function QuranTracker() {
+export default function MemorizationTracker() {
   const [data, setData] = useState(loadData);
   const [selectedSurah, setSelectedSurah] = useState(null);
   const [view, setView] = useState("grid"); // grid | stats
