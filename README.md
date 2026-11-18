@@ -23,4 +23,6 @@ If you are developing a production application, we recommend using TypeScript wi
 Progress lives in the browser's localStorage, with `public/memorization.csv` as the saved copy.
 
 - **Save:** click **Export CSV**, replace `public/memorization.csv` with the download, commit to `main`.
-- **Load:** a browser with no local data auto-loads the deployed CSV. Otherwise click **Load saved**.
+- **Load:** the app loads the deployed CSV on every startup. The exception is when this browser has edits
+  you haven't exported yet; those are kept until you export. Click **Load saved** to discard them and
+  reload the CSV.

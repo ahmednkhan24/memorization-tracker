@@ -23,27 +23,44 @@ function saveData(data) {
   } catch {}
 }
 
-const LARGE_THRESHOLD = 20;
+// "Dirty" = edits in this browser that haven't been exported to the CSV yet.
+const DIRTY_KEY = "quran_tracker_dirty";
+const isDirty = () => { try { return localStorage.getItem(DIRTY_KEY) === "1"; } catch { return false; } };
+const setDirty = (on) => {
+  try {
+    if (on) localStorage.setItem(DIRTY_KEY, "1");
+    else localStorage.removeItem(DIRTY_KEY);
+  } catch (e) {
+    console.warn("localStorage unavailable", e);
+  }
+};
 
 export default function MemorizationTracker() {
-  const [data, setData] = useState(loadData);
+  const [data, setDataRaw] = useState(loadData);
+  // User edits go through setData (marks unexported changes); CSV loads use setDataRaw.
+  const setData = useCallback((update) => { setDirty(true); setDataRaw(update); }, []);
   const [selectedSurah, setSelectedSurah] = useState(null);
   const [view, setView] = useState("grid"); // grid | stats
   const [filterJuz, setFilterJuz] = useState(0);
 
   useEffect(() => { saveData(data); }, [data]);
 
-  // First visit on this browser (nothing in localStorage): hydrate from the repo CSV.
-  const [hadLocal] = useState(() => localStorage.getItem(STORAGE_KEY) !== null);
+  // On startup, load the repo CSV, unless this browser has unexported edits
+  // (those are kept until you Export, or click "Load saved" to discard them).
   useEffect(() => {
-    if (hadLocal) return;
-    fetchSavedData().then(saved => { if (saved) setData(saved); });
-  }, [hadLocal]);
+    if (isDirty()) return;
+    fetchSavedData().then(saved => {
+      if (saved && !isDirty()) setDataRaw(saved);
+    });
+  }, []);
 
   const loadSaved = async () => {
     const saved = await fetchSavedData();
     if (!saved) return alert("Couldn't load memorization.csv from the site.");
-    if (confirm("Replace the data in this browser with the saved CSV?")) setData(saved);
+    if (confirm("Replace the data in this browser with the saved CSV?")) {
+      setDataRaw(saved);
+      setDirty(false);
+    }
   };
 
   const getSurahStatus = (num) => data.surahStatus[num] || STATUS.NONE;
@@ -157,7 +174,7 @@ export default function MemorizationTracker() {
               ⬇ Load saved
             </button>
             <button
-              onClick={() => downloadCsv(data)}
+              onClick={() => { downloadCsv(data); setDirty(false); }}
               title="Download memorization.csv, then commit it to public/ in the repo"
               className="px-3 py-2 rounded-lg text-sm border border-slate-700 hover:border-emerald-600 hover:text-emerald-400 transition-colors bg-slate-800"
             >
@@ -278,7 +295,6 @@ export default function MemorizationTracker() {
               {displaySurahs.map(surah => {
                 const status = getSurahStatus(surah.number);
                 const isExpanded = selectedSurah === surah.number;
-                const isLarge = surah.verses >= LARGE_THRESHOLD;
                 const memCount = getVerseMemorized(surah.number);
                 const memPct = Math.round(memCount / surah.verses * 100);
 
@@ -304,14 +320,12 @@ export default function MemorizationTracker() {
                       {/* Name */}
                       <button
                         className="flex-1 text-left"
-                        onClick={() => isLarge ? setSelectedSurah(isExpanded ? null : surah.number) : cycleSurahStatus(surah.number)}
+                        onClick={() => setSelectedSurah(isExpanded ? null : surah.number)}
                       >
                         <div className="flex items-center justify-between">
                           <div>
                             <span className="text-sm font-semibold">{surah.name}</span>
-                            {isLarge && (
-                              <span className="ml-1.5 text-xs opacity-50">{isExpanded ? "▲" : "▼"}</span>
-                            )}
+                            <span className="ml-1.5 text-xs opacity-50">{isExpanded ? "▲" : "▼"}</span>
                           </div>
                           <span className="text-base font-medium opacity-70" style={{ fontFamily: "'Amiri', 'Scheherazade New', Georgia, serif", direction: "rtl" }}>
                             {surah.arabic}
@@ -337,7 +351,7 @@ export default function MemorizationTracker() {
                     )}
 
                     {/* Verse grid (expanded) */}
-                    {isExpanded && isLarge && (
+                    {isExpanded && (
                       <div className="border-t border-slate-700/50 bg-slate-950/60 p-3">
                         <div className="flex items-center justify-between mb-2">
                           <span className="text-xs text-slate-400">Tap verses to mark progress</span>
